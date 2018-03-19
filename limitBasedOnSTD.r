@@ -1,8 +1,19 @@
 ###
 #
-#calculate some basic statistical values of from the presense and absence points
-#determine a range of acceptable values for the projection of values from
-#sampled points for previous years
+# calculate some basic statistical values of from the presense and absence points
+# determine a range of acceptable values for the projection of values from
+# sampled points for previous years
+#
+#
+#
+# 1st input csv: Sample
+# the outputs of a variable selection process
+# 
+# 2nd input CSV: predict
+# outputs of an extract values from a time period that we do not have sampling points for 
+#
+# dan Carver
+# 3/19/2018
 ###
 
 #stops R from using scientific notation
@@ -20,97 +31,133 @@ lowHigh <- function(x) {
   return(df)
 }
 
+lowHighLS5 <-function(x) {
+  #this function takes in a dataframe. Calculates mean, std, mean-std, and mean+std.
+  # Then returns a df with the calculated values with an applied ratio to match the bit range of LS8 to LS5 
+  # (2^8 / 2^12)
+  names <- colnames(x)
+  for (i in names) {
+    line <- paste('Is the index')
+    readline(prompt = "")
+  }
+  eadline(prompt="Is ")
+  return(as.integer(n))
+  mean <- sapply(x, mean)
+  std <- sapply(x, sd)
+  df = data.frame(cbind(mean, std))
+  df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
+  df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
+  return(df)
+}
+
 #input next round of data from a year that was sampled
-dataSam <- read.csv("C:\\Users\\danie\\Downloads\\LS_selectedpredictors_2015.csv")
+dataSam <- read.csv("C:\\Users\\nreluser\\Downloads\\p28_r28_2015_withradar_selectedpredictors2.csv")
 namesSam <- names(dataSam)
 head(dataSam)
 
-# subset the data based on presence and absence
-presenceSam <- subset(dataSam, response_var== 1)
-absenceSam <- subset(dataSam, response_var== 0)
+#deal with the 'P' and 'A'
+#this will change based on the input data set, use the head print out to test this
+dataSam$PA <- ifelse(data$response == 'A', 0,1)
+dataSam$response_var <- NULL
 
-#apply the function to the data
+# subset the data based on presence and absence
+presenceSam <- subset(dataSam, PA== 1)
+absenceSam <- subset(dataSam, PA== 0)
+
+####
+# that is all we do with the first dataset for the time being We will come back to it in a few 
+###
+
+#import data from the year where the sampling has taken place
+dataNew <- read.csv("C:\\Users\\nreluser\\Downloads\\LS_predictors_2015_1.csv")
+
+namesNew <- names(dataNew)
+namesNew
+
+#The removable of these varibles will be unique to the give dataset
+# you need to get ride of these cols order for the basic stat functions to run 
+dataNew$system.index <-NULL
+dataNew$.geo <- NULL
+na.omit(dataNew)
+
+#create a new column with 0 and 1 in liue of A and P
+dataNew$PA <- ifelse(data$PA15 == 'A', 0,1)
+dataNew$PA
+# remove the character column
+dataNew$PA15 <- NULL
+
+#subset based on presence or absence
+absence <- subset(dataNew, PA==0)
+presence <- subset(dataNew, PA==1)
+
+####
+# These names many not match across sensors so we may have to do some more user inputs to make this subset
+# most of the trickiness is making sure that these columns match  
+####
+
+# Select the columns from your prediction dataset that match the column names from your sampled set 
+predictorsP <- presence[which(colnames(presence) %in% namesSam)]
+predictorsA <- absence[which(colnames(absence) %in% namesSam)]
+
+#check print to ensure the selection work the number of cols in predictorsP and predictorsA should be <= ncol(namesSam)
+namesSam
+head(predictorsP)
+head(predictorsA)
+
+#Check to make the order of the columns matchs 
+namesSam <- namesSam[which( namesSam %in% names(predictorsP))]
+
+# subset the data based on presence and absence
+presenceSam <- subset(dataSam, PA== 1)
+presenceSam <- presenceSam[,namesSam]
+absenceSam <- subset(dataSam, PA== 0)
+absenceSam <- absenceSam[,namesSam]
+# Alternative due to the 
+
+#apply the function to the data for Landsat 8 images
 absenceRange <- lowHigh(absenceSam)
 presenceRange <- lowHigh(presenceSam)
 
-
-
-####
-# this will end up being for the first dataset, I'm going to leave it here for now
-#be it will eventually be moved and some information
-###
-
-
-#import data from the year where the sampling has taken place
-data <- read.csv("C:\\Users\\danie\\Downloads\\LS_allpredictors_2015_1.csv")
-
-names <- names(data)
-names
-#The removable of these varibles will be unique to the give dataset
-data$system.index <-NULL
-data$.geo <- NULL
-na.omit(data)
-
-#create a new column with 0 and 1 in liue of A and P
-data$PA <- ifelse(data$PA15 == 'A', 0,1)
-data$PA
-data$PA15 <- NULL
-
-#subset based on presence or absence
-absence <- subset(data, PA==0)
-presence <- subset(data, PA==1)
-
-
-
-predictorsP <- presenceRange[which(rownames(presenceRange) %in% namesSam),]
-predictorsA <- absenceRange[which(rownames(absenceRange) %in% namesSam),]
-
-###
-predictorsP
-predictorsN
-
+#apply the function for landsat 5 images 
+absenceRangeLS5 <- lowHighLS5(absenceSam)
+presenceRangeLS5 <- lowHighLS5(presenceSam)
 
 
 #find
-totalNumP <- seq(1,nrow(predictorsP))
-namesSam <- names(dataSam)[-c(1,2)]
-indexP <- t(matrix(presence2013$X))
-outputP <- matrix(nrow=length(totalNumP) ,ncol=nrow(presence2013))
-outputP <- rbind(outputP, indexP)
+totalNumP <- seq(1,ncol(predictorsP))
+outputP <- matrix(nrow=nrow(predictorsP) ,ncol=ncol(predictorsP))
+
 for (pred in totalNumP){
   print(pred)
-  low <- predictorsP[pred,3]
-  high <- predictorsP[pred,4]
-  outputP[pred,] <- presence2013[,namesSam[pred]] > low & presence2013[,namesSam[pred]] < high
+  low <- presenceRange[pred,3]
+  high <- presenceRange[pred,4]
+  outputP[,pred] <- predictorsP[,namesSam[pred]] > low & predictorsP[,namesSam[pred]] < high
 }
 
-outputP <- t(outputP)
-presenceEval <- cbind(presence2013, data.frame(outputP))
-presenceEval$sum <- apply(presenceEval[,c("X1","X2","X3","X4")], 1, sum)
-
+presenceEval <- cbind(predictorsP, data.frame(outputP))
+presenceEval$sum <- apply(presenceEval[,c("X1","X2","X3","X4","X5")], 1, sum)
 head(presenceEval)
+table(presenceEval$sum)
 
 
+#repeat the process for absence 
+totalNumA <- seq(1,ncol(predictorsA))
+outputA <- matrix(nrow=nrow(predictorsA) ,ncol=ncol(predictorsA))
 
-
-totalNumA <- seq(1,nrow(predictorsA))
-namesSam <- names(dataSam)[-c(1,2)]
-indexA <- t(matrix(absence2013$X))
-outputA <- matrix(nrow=length(totalNumA) ,ncol=nrow(absence2013))
-outputA <- rbind(outputA, indexA)
 for (pred in totalNumA){
   print(pred)
-  low <- predictorsA[pred,3]
-  high <- predictorsA[pred,4]
-  outputA[pred,] <- absence2013[,namesSam[pred]] > low & absence2013[,namesSam[pred]] < high
+  low <- absenceRange[pred,3]
+  high <- absenceRange[pred,4]
+  outputA[,pred] <- predictorsA[,namesSam[pred]] > low & predictorsA[,namesSam[pred]] < high
 }
 
-outputA <- t(outputA)
-absenceEval <- cbind(absence2013, data.frame(outputA))
-absenceEval$sum <- apply(absenceEval[,c("X1","X2","X3","X4")], 1, sum)
-
+absenceEval <- cbind(predictorsA, data.frame(outputA))
+absenceEval$sum <- apply(absenceEval[,c("X1","X2","X3","X4","X5")], 1, sum)
 head(absenceEval)
+table(absenceEval$sum)
 
 
+
+#add the dataframes for presence and absence together
 combinedDF <-rbind(absenceEval, presenceEval)
-write.csv(combinedDF, file = "MyData.csv")
+write.csv(combinedDF, file = "set path to where you want it save MyData.csv")
