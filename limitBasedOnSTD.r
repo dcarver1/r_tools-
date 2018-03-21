@@ -31,24 +31,65 @@ lowHigh <- function(x) {
   return(df)
 }
 
-lowHighLS5 <-function(x) {
+lowHighLS5 <-function(x){
   #this function takes in a dataframe. Calculates mean, std, mean-std, and mean+std.
   # Then returns a df with the calculated values with an applied ratio to match the bit range of LS8 to LS5 
   # (2^8 / 2^12)
   names <- colnames(x)
-  for (i in names) {
-    line <- paste('Is the index')
-    readline(prompt = "")
+  bands <- matrix(ncol = ncol(x), nrow = 5)
+  for (i in names){
+  n <- readline(prompt = paste('Is the index', i , ' a single band? Please enter 1 for yes or 0 for no: '))
+    if (n == 1){
+      mean <- sapply(x$i, mean)
+      std <- sapply(x$i, sd)
+      df = data.frame(cbind(mean, std))
+      df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
+      df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
+      return(df)
+    }else{
+      mean <- sapply(x$i, mean)
+      std <- sapply(x$i, sd)
+      df = data.frame(cbind(mean, std))
+      df['lowLs5'] <- as.numeric(df$mean-df$std)
+      df['highLs5'] <- as.numeric(df$mean+df$std)
+      return(df)
+    }
+  bands <- rbind(data.frame(bands),df)
+  }}
+
+
+
+
+x <- presenceSam
+
+names <- colnames(x)
+bands <- matrix(ncol = ncol(x), nrow = 5)
+for (j in seq(length(names))){
+  print()
+  i=names[j] 
+  n <- readline(prompt = paste('Is the index', i , ' a single band? Please enter 1 for yes or 0 for no: '))
+  if (n == 1){
+    mean <- sapply(x[j], mean)
+    std <- sapply(x[j], sd)
+    df = data.frame(cbind(mean, std))
+    df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
+    df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
+    return(df)
+  }else{
+    mean <- sapply(x[j], mean)
+    std <- sapply(x[j], sd)
+    df = data.frame(cbind(mean, std))
+    df['lowLs5'] <- as.numeric(df$mean-df$std)
+    df['highLs5'] <- as.numeric(df$mean+df$std)
+    return(df)
   }
-  eadline(prompt="Is ")
-  return(as.integer(n))
-  mean <- sapply(x, mean)
-  std <- sapply(x, sd)
-  df = data.frame(cbind(mean, std))
-  df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
-  df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
-  return(df)
+  j=j+1
+  bands <- rbind(data.frame(bands),df)
 }
+
+
+
+
 
 #input next round of data from a year that was sampled
 dataSam <- read.csv("C:\\Users\\nreluser\\Downloads\\p28_r28_2015_withradar_selectedpredictors2.csv")
