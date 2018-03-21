@@ -36,60 +36,30 @@ lowHighLS5 <-function(x){
   # Then returns a df with the calculated values with an applied ratio to match the bit range of LS8 to LS5 
   # (2^8 / 2^12)
   names <- colnames(x)
-  bands <- matrix(ncol = ncol(x), nrow = 5)
-  for (i in names){
-  n <- readline(prompt = paste('Is the index', i , ' a single band? Please enter 1 for yes or 0 for no: '))
+  bands <- matrix(ncol = 4, nrow = 0)
+  colnames(bands) <- c("mean","std","lowLs5","highLs5")
+  for (j in seq(length(names))){
+    print(j)
+    i=names[j] 
+    n <- readline(prompt = paste('Is the index', i , ' a single band? Please enter 1 for yes or 0 for no: '))
     if (n == 1){
-      mean <- sapply(x$i, mean)
-      std <- sapply(x$i, sd)
-      df = data.frame(cbind(mean, std))
-      df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
-      df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
-      return(df)
-    }else{
-      mean <- sapply(x$i, mean)
-      std <- sapply(x$i, sd)
+      mean <- sapply(x[j], mean)*0.0625
+      std <- sapply(x[j], sd)*0.0625
       df = data.frame(cbind(mean, std))
       df['lowLs5'] <- as.numeric(df$mean-df$std)
       df['highLs5'] <- as.numeric(df$mean+df$std)
-      return(df)
+    }else{
+      mean <- sapply(x[j], mean)
+      std <- sapply(x[j], sd)
+      df = data.frame(cbind(mean, std))
+      df['lowLs5'] <- as.numeric(df$mean-df$std)
+      df['highLs5'] <- as.numeric(df$mean+df$std)
     }
-  bands <- rbind(data.frame(bands),df)
-  }}
-
-
-
-
-x <- presenceSam
-
-names <- colnames(x)
-bands <- matrix(ncol = ncol(x), nrow = 5)
-for (j in seq(length(names))){
-  print()
-  i=names[j] 
-  n <- readline(prompt = paste('Is the index', i , ' a single band? Please enter 1 for yes or 0 for no: '))
-  if (n == 1){
-    mean <- sapply(x[j], mean)
-    std <- sapply(x[j], sd)
-    df = data.frame(cbind(mean, std))
-    df['lowLs5'] <- as.numeric(df$mean-df$std)*0.0625
-    df['highLs5'] <- as.numeric(df$mean+df$std)*0.0625
-    return(df)
-  }else{
-    mean <- sapply(x[j], mean)
-    std <- sapply(x[j], sd)
-    df = data.frame(cbind(mean, std))
-    df['lowLs5'] <- as.numeric(df$mean-df$std)
-    df['highLs5'] <- as.numeric(df$mean+df$std)
-    return(df)
+    bands <- rbind(data.frame(bands),df)
+    j=j+1
   }
-  j=j+1
-  bands <- rbind(data.frame(bands),df)
+  return(bands)
 }
-
-
-
-
 
 #input next round of data from a year that was sampled
 dataSam <- read.csv("C:\\Users\\nreluser\\Downloads\\p28_r28_2015_withradar_selectedpredictors2.csv")
@@ -98,7 +68,7 @@ head(dataSam)
 
 #deal with the 'P' and 'A'
 #this will change based on the input data set, use the head print out to test this
-dataSam$PA <- ifelse(data$response == 'A', 0,1)
+dataSam$PA <- ifelse(dataSam$response_var == 'A', 0,1)
 dataSam$response_var <- NULL
 
 # subset the data based on presence and absence
