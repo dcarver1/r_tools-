@@ -62,14 +62,17 @@ lowHighLS5 <-function(x){
 }
 
 #input next round of data from a year that was sampled
-dataSam <- read.csv("C:\\Users\\nreluser\\Downloads\\p28_r28_2015_withradar_selectedpredictors2.csv")
+dataSam <- read.csv("C:\\Users\\nreluser\\Downloads\\LS_allpredictors_2015_1.csv")
 namesSam <- names(dataSam)
 head(dataSam)
+dataSam$system.index <-NULL
+dataSam$.geo <- NULL
+na.omit(dataSam)
 
 #deal with the 'P' and 'A'
 #this will change based on the input data set, use the head print out to test this
-dataSam$PA <- ifelse(dataSam$response_var == 'A', 0,1)
-dataSam$response_var <- NULL
+dataSam$PA <- ifelse(dataSam$PA15 == 'A', 0,1)
+dataSam$PA15 <- NULL
 
 # subset the data based on presence and absence
 presenceSam <- subset(dataSam, PA== 1)
@@ -79,12 +82,21 @@ absenceSam <- subset(dataSam, PA== 0)
 # that is all we do with the first dataset for the time being We will come back to it in a few 
 ###
 
-#import data from the year where the sampling has taken place
-dataNew <- read.csv("C:\\Users\\nreluser\\Downloads\\LS_predictors_2015_1.csv")
+#import data from the year where the model is being projected
+dataNew <- read.csv("C:\\Users\\nreluser\\Downloads\\All_2005_selectedpredictors_CC_0.75_noT1.csv")
 
 namesNew <- names(dataNew)
 namesNew
+###
+#Unique to this specific sample; Set values to match the 2015 colNames 
+colnames(dataNew) <-c("X","response_var","TCG_15_T2", "swir1_15_T3" )
+#subset based on response variable 
+absence <- subset(dataNew, response_var==1)
+presence <- subset(dataNew, response_var==0)
+###
 
+
+###Stand Method
 #The removable of these varibles will be unique to the give dataset
 # you need to get ride of these cols order for the basic stat functions to run 
 dataNew$system.index <-NULL
@@ -92,14 +104,17 @@ dataNew$.geo <- NULL
 na.omit(dataNew)
 
 #create a new column with 0 and 1 in liue of A and P
-dataNew$PA <- ifelse(data$PA15 == 'A', 0,1)
+dataNew$PA <- ifelse(data$response_var == 'A', 0,1)
 dataNew$PA
 # remove the character column
-dataNew$PA15 <- NULL
+dataNew$PA <- dataNew$response_var
+dataNew$response_var <- NULL
 
 #subset based on presence or absence
 absence <- subset(dataNew, PA==0)
 presence <- subset(dataNew, PA==1)
+###
+
 
 ####
 # These names many not match across sensors so we may have to do some more user inputs to make this subset
@@ -137,7 +152,7 @@ presenceRangeLS5 <- lowHighLS5(presenceSam)
 #find
 totalNumP <- seq(1,ncol(predictorsP))
 outputP <- matrix(nrow=nrow(predictorsP) ,ncol=ncol(predictorsP))
-
+row.names(outputP) <- row.names(predictorsP)
 for (pred in totalNumP){
   print(pred)
   low <- presenceRange[pred,3]
@@ -146,7 +161,7 @@ for (pred in totalNumP){
 }
 
 presenceEval <- cbind(predictorsP, data.frame(outputP))
-presenceEval$sum <- apply(presenceEval[,c("X1","X2","X3","X4","X5")], 1, sum)
+presenceEval$sum <- apply(presenceEval[,c("X1","X2")], 1, sum)
 head(presenceEval)
 table(presenceEval$sum)
 
@@ -154,7 +169,7 @@ table(presenceEval$sum)
 #repeat the process for absence 
 totalNumA <- seq(1,ncol(predictorsA))
 outputA <- matrix(nrow=nrow(predictorsA) ,ncol=ncol(predictorsA))
-
+row.names(outputA) <- row.names(predictorsA)
 for (pred in totalNumA){
   print(pred)
   low <- absenceRange[pred,3]
@@ -163,7 +178,7 @@ for (pred in totalNumA){
 }
 
 absenceEval <- cbind(predictorsA, data.frame(outputA))
-absenceEval$sum <- apply(absenceEval[,c("X1","X2","X3","X4","X5")], 1, sum)
+absenceEval$sum <- apply(absenceEval[,c("X1","X2")], 1, sum)
 head(absenceEval)
 table(absenceEval$sum)
 
@@ -171,4 +186,18 @@ table(absenceEval$sum)
 
 #add the dataframes for presence and absence together
 combinedDF <-rbind(absenceEval, presenceEval)
-write.csv(combinedDF, file = "set path to where you want it save MyData.csv")
+combinedDF <- combinedDF[order(as.numeric(row.names(combinedDF))),]
+
+#import dataset for geographic data 
+
+dataGeo <- read.csv("C:\\Users\\nreluser\\Downloads\\all_predictors_2005.csv")
+head(dataGeo)
+
+valuesGeo <- cbind(combinedDF, dataGeo[,c('x_coord','y_coord')])
+valuesGeo <- subset(valuesGeo, sum >= 1)
+colnames(valuesGeo) <- c('TCG_05_T2', 'swir1_05_T3',    'X1',    'X2', 'sum',   'x_coord',  'y_coord')
+head(valuesGeo)
+
+#write out the csv 
+write.csv(valuesGeo, file = "C:\\Users\\nreluser\\Downloads\\backcast05SingleScene.csv")
+
